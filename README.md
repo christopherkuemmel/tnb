@@ -35,7 +35,7 @@ crypto_df = cdr.request(currency, exchange, start_date, end_date)
 ### Iterate Crypto Data
 
 ```python
-crypto_data = pd.read_csv('crypto_data.csv')
+crypto_df = pd.read_csv('crypto_data.csv')
 
 loader_params = {
   'batch_size': 1,
@@ -45,7 +45,7 @@ loader_params = {
 historical_seq_len = 50
 mapping = ['open', 'high', 'low', 'close', 'amount']
 
-ccd = CryptoCandleDataset(crypto_data, historical_seq_len, mapping)
+ccd = CryptoCandleDataset(crypto_df, historical_seq_len, mapping)
 train_loader = DataLoader(ccd, **loader_params)
 
 for step, batch in enumerate(train_loader):

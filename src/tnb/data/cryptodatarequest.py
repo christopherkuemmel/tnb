@@ -38,26 +38,23 @@ class CryptoDataRequest:
         }
         historical_api = self.poloniex_url + currency + '/candles'
 
+        intervals = list(
+            range(start_date * 1000, end_date * 1000,
+                  resolution * self.max_request_interval * 1000))
+
         crypto_data = []
-        _previous_interval = -1
-        for interval in tqdm(
-                range(start_date * 1000, end_date * 1000,
-                      resolution * self.max_request_interval * 1000)):
+        for idx, interval in enumerate(tqdm(intervals)):
 
-            # skip first range return
-            if _previous_interval < 0:
-                _previous_interval = interval
-                continue
-
-            input_fields['startTime'] = _previous_interval
-            input_fields['endTime'] = interval
+            if len(intervals) in [1, idx + 1]:
+                input_fields['endTime'] = end_date
+            else:
+                input_fields['endTime'] = intervals[idx + 1]
+            input_fields['startTime'] = interval
 
             # get request
             response = requests.get(historical_api, params=input_fields)
             if response.status_code == 200:
                 crypto_data.extend(json.loads(response.content.decode("utf-8")))
-
-            _previous_interval = interval
 
         columns = [
             'low', 'high', 'open', 'close', 'amount', 'quantity',
@@ -68,25 +65,27 @@ class CryptoDataRequest:
 
     def _request_ftx(self, currency: str, start_date: int, end_date: int,
                      resolution: int) -> pd.DataFrame:
-        """https://docs.ftx.com/#get-historical-prices"""
+        """https://docs.ftx.com/#get-historical-prices
+        
+        Tends to have missing values.
+        """
         input_fields = {
             'resolution': resolution,
         }
         historical_api = self.ftx_url + currency + '/candles'
 
+        intervals = list(
+            range(start_date, end_date, resolution * self.max_request_interval))
+
         crypto_data = []
-        _previous_interval = -1
-        for interval in tqdm(
-                range(start_date, end_date,
-                      resolution * self.max_request_interval)):
 
-            # skip first range return
-            if _previous_interval < 0:
-                _previous_interval = interval
-                continue
+        for idx, interval in enumerate(tqdm(intervals)):
 
-            input_fields['start_time'] = _previous_interval
-            input_fields['end_time'] = interval
+            if len(intervals) in [1, idx + 1]:
+                input_fields['end_time'] = end_date
+            else:
+                input_fields['end_time'] = intervals[idx + 1]
+            input_fields['start_time'] = interval
 
             # get request
             response = requests.get(historical_api, params=input_fields)
@@ -94,14 +93,13 @@ class CryptoDataRequest:
                 crypto_data.extend(
                     json.loads(response.content.decode("utf-8"))['result'])
 
-            _previous_interval = interval
         return pd.DataFrame(crypto_data)
 
     def request(self,
                 currency: str,
+                exchange: str,
                 start_date: int,
                 end_date: int,
-                exchange: str = 'ftx',
                 resolution: int = 300,
                 file_path: str = None) -> pd.DataFrame:
         """
